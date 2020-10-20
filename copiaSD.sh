@@ -2,6 +2,10 @@
 #Automatización de copia y configuracion WiFi de SD para Raspberry Pi
 #Sólo probado en Raspberry Pi 3 B+
 
+SERVIDOR="https://downloads.raspberrypi.org/"
+IMAGEN="raspios_lite_arm64_latest"
+#IMAGEN="raspios_lite_latest"
+
 #Limpiar pantalla y comprobar parametros. Se pide pass para sudo aqui
 sudo clear
 if [ $# -ne 2 ] ; then
@@ -14,13 +18,13 @@ if [ $# -ne 2 ] ; then
 fi
 
 #Comprobar acceso a https://downloads.raspberrypy.org
-echo "Comprobando acceso a www.raspberripy.org"
-RETORNO=$(curl -m5 -s -I https://downloads.raspberrypi.org | grep HTTP | awk {'$
+echo "Comprobando acceso a $SERVIDOR"
+RETORNO=$(curl -m 5 -s -I $SERVIDOR | grep HTTP | awk {'print $2'})
 if [ $RETORNO -ne 200 ] ; then
   echo "Sin acceso a la web. No se puede continuar. Adios ..."
   exit 0
 else
-  echo "Acceso a www.raspberripy.org correcto!"
+  echo "Acceso a $SERVIDOR correcto!"
 fi
 
 #Obtener identificador de la SD (/dev/sdX)
@@ -44,32 +48,32 @@ echo "¿Quiere continuar?"
 select RESPUESTA in Si No ; do
   case $RESPUESTA in
     Si ) echo "Comprobando si existe el fichero de imagen ..."
-         if [ -f raspios_lite_arm64_latest ] ; then
+         if [ -f $IMAGEN ] ; then
            echo "Fichero encontrado!"
          else
            #Descarga del fichero
            echo "No encuentro el fichero de imagen. Descargandolo ..."
-           wget https://downloads.raspberrypi.org/raspios_lite_arm64_latest
+           wget $SERVIDOR$IMAGEN
            echo "Descargando verificación del fichero ..."
-           wget https://downloads.raspberrypi.org/raspios_lite_arm64_latest.sha1
+           wget $SERVIDOR$IMAGEN.sha1
            echo "Ficheros descargados!"
          fi
          
          #Comprobar integridad del fichero descargado
          echo "Comprobando integridad del fichero descargado, espere por favor ..."
-         CHECKSUM=$(tail -n1 raspios_lite_arm64_latest.sha1 | cut -d " " -f1)
-         CHECKSUMAUX=$(sha1sum -b raspios_lite_arm64_latest | cut -d " " -f1)
+         CHECKSUM=$(tail -n1 $IMAGEN.sha1 | cut -d " " -f1)
+         CHECKSUMAUX=$(sha1sum -b $IMAGEN | cut -d " " -f1)
          if [ $CHECKSUM == $CHECKSUMAUX ] ; then
            echo "Fichero correcto!!"
          else
            echo "Fichero descargado incorrecto!!. No se puede continuar. Adios ..."
-           #rm -f raspios_lite_arm64_latest
+           #rm -f $IMAGEN $IMAGEN.sha1
            exit 0
          fi
          
          #Descompresion y copia de imagen a SD (sudo necesario)
          echo "Copiando fichero de imagen a SD:"
-         unzip -p raspios_lite_arm64_latest | sudo dd of=/dev/sdb bs=16K status=progress && sync
+         unzip -p $IMAGEN | sudo dd of=/dev/sdb bs=16K status=progress && sync
          #Modificacion de ficheros para acceso SSH y conexion WiFi (sudo necesario)
          echo "Creando puntos de montaje para particiones de la SD ..."
          DIRECTORIO=$(mktemp -d --tmpdir=/tmp/ PART1.XXX)
