@@ -8,12 +8,14 @@ IMAGEN="raspios_lite_arm64_latest"
 
 #Limpiar pantalla y comprobar parametros. Se pide pass para sudo aqui
 sudo clear
-if [ $# -ne 2 ] ; then
-  echo "Numero incorrecto de parámetros, se necesitan 2 y ha introducido $#"
+if [ $# -ne 4 ] ; then
+  echo "Numero incorrecto de parámetros, se necesitan 4 y ha introducido $#"
   echo "Los dos parametros requeridos son:"
   echo " - Primero, el nombre de la red WiFi a conectar"
   echo " - Segundo, la contraseña de la red Wifi indicada como primer parametro"
-  echo "Ejemplo: ${0} nombre_de_la_red clave_de_acceso"
+  echo " - Tercero, la dirección IP a asignar al equipo"
+  echo " - Cuarto, la direccion IP de la puerta de enlace"
+  echo "Ejemplo: ${0} nombre_wifi clave_wifi 192.168.0.2 192.168.0.1"
   exit 0
 fi
 
@@ -83,8 +85,11 @@ select RESPUESTA in Si No ; do
          echo "Configurando acceso a red WiFi ${1}"
          echo -e "country=ES\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1" > ${DIRECTORIO}/wpa_supplicant.conf
          wpa_passphrase ${1} ${2} >> ${DIRECTORIO}/wpa_supplicant.conf
-         #sudo sed -i "/#/d" ${DIRECTORIO}/wpa_supplicant.conf
          sed -i "/#/d" ${DIRECTORIO}/wpa_supplicant.conf 2>/dev/null
+         sudo umount ${DIRECTORIO}
+         echo "Configurando IP estatica ${3} con puerta de enlace ${4}"
+         sudo mount "${UNIDAD}"2 ${DIRECTORIO}
+         echo -e "interface wlan0\n ipaddress=${3}/24\n routers=${4}\n domain_name_servers=${4} 8.8.8.8" >> ${DIRECTORIO}/etc/dhcpcd.conf
          sudo umount ${DIRECTORIO}
          rm -rf {$DIRECTORIO}
          echo "Proceso finalizado correctamente."
