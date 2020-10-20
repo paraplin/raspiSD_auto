@@ -1,7 +1,7 @@
 # raspiSD_auto
 Scrip para automatizar la creación de una SD basada en Raspberry Pi OS con acceso WiFi y SSH.
 
-#Funcionamiento
+# Funcionamiento
 Para el correcto funcionamiento del Script, este debe recibir dos parámetros, el nombre de la red a la que nos queremos conectar con nuestra Raspberry Pi y la clave de acceso para conectarnos.
 Debido a que el script hace uso del comando dd para escribir en la tarjeta SD nos pedirá la contraseña del usuario para poder ejecutar el comando "sudo" (el usuario que ejecuta el script debe ester incluido en el fichero sudoers para poder utilizar el comando sudo).
 Tras comprobar que se han introducido los parámetros comprueba el acceso a la web.
