@@ -4,7 +4,7 @@
 
 SERVIDOR="https://downloads.raspberrypi.org/"
 IMAGEN="raspios_lite_arm64_latest"
-#IMAGEN="raspios_lite_latest"
+#Para 32 bits usar esta imagen: "raspios_lite_latest"
 
 #Limpiar pantalla y comprobar parametros. Se pide pass para sudo aqui
 sudo clear
