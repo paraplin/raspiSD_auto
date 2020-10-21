@@ -13,3 +13,5 @@ Debido a que utiliza una version de Raspberry Pi OS de 64 bits este script sólo
 
 # Instalación
 Clona este repositorio o copia el fichero .sh a tu PC, dale permisos de ejecución al fichero y ejecútalo.
+
+Nota: Repositorio de prueba en proceso de testeado. Si ves algun error no dudes en comunicármelo.
