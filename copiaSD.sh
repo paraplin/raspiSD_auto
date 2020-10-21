@@ -47,35 +47,35 @@ echo "ATENCION:"
 echo " - Se sobreescribirá TODO el contenido de la unidad ${UNIDAD}."
 echo " - Se configurará la SD para acceder a la WiFi ${1}."
 echo "¿Quiere continuar?"
-select RESPUESTA in Si No ; do
-  case $RESPUESTA in
+select {RESPUESTA} in Si No ; do
+  case ${RESPUESTA} in
     Si ) echo "Comprobando si existe el fichero de imagen ..."
-         if [ -f $IMAGEN ] ; then
+         if [ -f ${IMAGEN} ] ; then
            echo "Fichero encontrado!"
          else
            #Descarga del fichero
            echo "No encuentro el fichero de imagen. Descargandolo ..."
-           wget $SERVIDOR$IMAGEN
-           echo "Descargando verificación del fichero ..."
-           wget $SERVIDOR$IMAGEN.sha1
-           echo "Ficheros descargados!"
+           wget ${SERVIDOR}${IMAGEN}
+           echo "Fichero descargado!"
          fi
          
          #Comprobar integridad del fichero descargado
-         echo "Comprobando integridad del fichero descargado, espere por favor ..."
+         echo "Comprobando integridad de la imagen, espere por favor ..."
+         if [! -f ${IMAGEN}.sha1 ] ; then
+           wget ${SERVIDOR}${IMAGEN}.sha1
          CHECKSUM=$(tail -n1 $IMAGEN.sha1 | cut -d " " -f1)
          CHECKSUMAUX=$(sha1sum -b $IMAGEN | cut -d " " -f1)
          if [ $CHECKSUM == $CHECKSUMAUX ] ; then
            echo "Fichero correcto!!"
          else
-           echo "Fichero descargado incorrecto!!. No se puede continuar. Adios ..."
-           #rm -f $IMAGEN $IMAGEN.sha1
+           echo "Fichero incorrecto!!. No se puede continuar. Adios ..."
+           rm -f $IMAGEN $IMAGEN.sha1
            exit 0
          fi
          
          #Descompresion y copia de imagen a SD (sudo necesario)
          echo "Copiando fichero de imagen a SD:"
-         unzip -p $IMAGEN | sudo dd of=/dev/sdb bs=16K status=progress && sync
+         unzip -p $IMAGEN | sudo dd of=${UNIDAD} bs=16K status=progress && sync
          #Modificacion de ficheros para acceso SSH y conexion WiFi (sudo necesario)
          echo "Creando puntos de montaje para particiones de la SD ..."
          DIRECTORIO=$(mktemp -d --tmpdir=/tmp/ PART1.XXX)
