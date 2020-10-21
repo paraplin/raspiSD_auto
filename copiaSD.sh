@@ -10,7 +10,7 @@ IMAGEN="raspios_lite_arm64_latest"
 sudo clear
 if [ $# -ne 4 ] ; then
   echo "Numero incorrecto de parámetros, se necesitan 4 y ha introducido $#"
-  echo "Los dos parametros requeridos son:"
+  echo "Los cuatro parametros requeridos son: (separados por espacios)"
   echo " - Primero, el nombre de la red WiFi a conectar"
   echo " - Segundo, la contraseña de la red Wifi indicada como primer parametro"
   echo " - Tercero, la dirección IP a asignar al equipo"
@@ -20,84 +20,94 @@ if [ $# -ne 4 ] ; then
 fi
 
 #Comprobar acceso a https://downloads.raspberrypy.org
-echo "Comprobando acceso a $SERVIDOR"
-RETORNO=$(curl -m 5 -s -I $SERVIDOR | grep HTTP | awk {'print $2'})
-if [ $RETORNO -ne 200 ] ; then
+echo "Comprobando acceso a ${SERVIDOR}"
+RETORNO=$(curl -m 5 -s -I ${SERVIDOR} | grep HTTP | awk {'print $2'})
+if [ ${RETORNO} -ne 200 ] ; then
   echo "Sin acceso a la web. No se puede continuar. Adios ..."
   exit 0
 else
-  echo "Acceso a $SERVIDOR correcto!"
+  echo "Acceso a ${SERVIDOR} correcto!"
 fi
 
 #Obtener identificador de la SD (/dev/sdX)
 echo "Copia y configuración de una SD para Raspberry Pi 3 B+"
 echo "Detectando tarjeta SD ..."
 UNIDAD=$(lsblk -n -p -o PATH,TYPE,HOTPLUG,TRAN | grep disk | grep 1 | grep usb)
-RUTAUNIDAD=($(echo "$UNIDAD" | tr ' ' '\n'))
+RUTAUNIDAD=($(echo "${UNIDAD}" | tr ' ' '\n'))
 UNIDAD=${RUTAUNIDAD[0]}
-if [ -z $UNIDAD ] ; then
+if [ -z ${UNIDAD} ] ; then
   echo "Tarjeta SD NO detectada. No se puede continuar. Adios ..."
   exit 0
 else
-  echo "Tarjeta SD detectada en $UNIDAD"
+  echo "Tarjeta SD detectada en ${UNIDAD}"
 fi
 
 #Descarga, copia y modificación de SD
+echo "####################################"
 echo "ATENCION:"
-echo " - Se sobreescribirá TODO el contenido de la unidad ${UNIDAD}."
-echo " - Se configurará la SD para acceder a la WiFi ${1}."
-echo "¿Quiere continuar?"
-select {RESPUESTA} in Si No ; do
-  case ${RESPUESTA} in
-    Si ) echo "Comprobando si existe el fichero de imagen ..."
-         if [ -f ${IMAGEN} ] ; then
-           echo "Fichero encontrado!"
-         else
-           #Descarga del fichero
-           echo "No encuentro el fichero de imagen. Descargandolo ..."
-           wget ${SERVIDOR}${IMAGEN}
-           echo "Fichero descargado!"
-         fi
-         
-         #Comprobar integridad del fichero descargado
-         echo "Comprobando integridad de la imagen, espere por favor ..."
-         if [! -f ${IMAGEN}.sha1 ] ; then
-           wget ${SERVIDOR}${IMAGEN}.sha1
-         CHECKSUM=$(tail -n1 $IMAGEN.sha1 | cut -d " " -f1)
-         CHECKSUMAUX=$(sha1sum -b $IMAGEN | cut -d " " -f1)
-         if [ $CHECKSUM == $CHECKSUMAUX ] ; then
-           echo "Fichero correcto!!"
-         else
-           echo "Fichero incorrecto!!. No se puede continuar. Adios ..."
-           rm -f $IMAGEN $IMAGEN.sha1
-           exit 0
-         fi
-         
-         #Descompresion y copia de imagen a SD (sudo necesario)
-         echo "Copiando fichero de imagen a SD:"
-         unzip -p $IMAGEN | sudo dd of=${UNIDAD} bs=16K status=progress && sync
-         #Modificacion de ficheros para acceso SSH y conexion WiFi (sudo necesario)
-         echo "Creando puntos de montaje para particiones de la SD ..."
-         DIRECTORIO=$(mktemp -d --tmpdir=/tmp/ PART1.XXX)
-         sudo mount -o umask=000 "${UNIDAD}"1 ${DIRECTORIO}
-         echo "Permitiendo acceso por SSH"
-         touch ${DIRECTORIO}/ssh
-         echo "Configurando acceso a red WiFi ${1}"
-         echo -e "country=ES\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1" > ${DIRECTORIO}/wpa_supplicant.conf
-         wpa_passphrase ${1} ${2} >> ${DIRECTORIO}/wpa_supplicant.conf
-         sed -i "/#/d" ${DIRECTORIO}/wpa_supplicant.conf 2>/dev/null
-         sudo umount ${DIRECTORIO}
-         echo "Configurando IP estatica ${3} con puerta de enlace ${4}"
-         sudo mount "${UNIDAD}"2 ${DIRECTORIO}
-         echo -e "interface wlan0\n ipaddress=${3}/24\n routers=${4}\n domain_name_servers=${4} 8.8.8.8" >> ${DIRECTORIO}/etc/dhcpcd.conf
-         sudo umount ${DIRECTORIO}
-         rm -rf {$DIRECTORIO}
-         echo "Proceso finalizado correctamente."
-         break;;
-         
-    No ) echo "Ha contestado NO. No se continúa. Adios ..."
-         break;;
-
-  esac
-done
-exit 0
+echo "Se sobreescribirá TODO el contenido de la unidad ${UNIDAD}"
+echo "Además, en ${UNIDAD} se configurará:"
+echo " - Acceso por SSH"
+echo " - Acceso WiFi a ${1}"
+echo " - IP estatica: ${3}"
+echo " - Servidores DNS: ${4} 8.8.8.8"
+echo "####################################"
+read -rp $'Quiere continuar? (S -> continuar) : ' -en1 RESPUESTA;
+case $RESPUESTA in
+  S)
+    echo "Comprobando si existe el fichero de imagen ..."
+    if [ -f raspios.zip ] ; then
+      echo "Fichero encontrado!"
+    else
+      #Descarga del fichero
+      echo "No encuentro el fichero de imagen. Descargandolo ..."
+      wget -q --show-progress -O raspios.zip ${SERVIDOR}${IMAGEN}
+      echo "Fichero descargado!"
+    fi
+    #Comprobar integridad del fichero descargado
+    if [ -f raspios.sha1 ] ; then
+      echo "Fichero de comprobacion encontrado ..."
+    else
+      echo "Descargando fichero de comprobación ..." 
+      wget -q --show-progress -O raspios.sha1 ${SERVIDOR}${IMAGEN}.sha1
+    fi
+    echo "Comprobando integridad de la imagen, espere por favor ..."
+    CHECKSUM=$(tail -n1 raspios.sha1 | cut -d " " -f1)
+    CHECKSUMAUX=$(sha1sum -b raspios.zip | cut -d " " -f1)
+    if [ $CHECKSUM == $CHECKSUMAUX ] ; then
+      if [ -z $CHECKSUM ] ; then
+        echo "Fichero incorrecto!!. Error, no puedo continuar. Adios ..."
+        exit 0
+      else
+        echo "Fichero correcto!!"
+      fi
+    else
+      echo "Fichero incorrecto!!. Borre los ficheros raspios.* ..."
+      echo "No se puede continuar. Adios ..."
+      exit 0
+    fi
+    #Descompresion y copia de imagen a SD (sudo necesario)
+    echo "Copiando fichero de imagen a SD:"
+    unzip -p raspios.zip | sudo dd of=${UNIDAD} bs=16K status=progress && sync
+    #Modificacion de ficheros para acceso SSH y conexion WiFi (sudo necesario)
+    echo "Creando puntos de montaje para particiones de la SD ..."
+    DIRECTORIO=$(mktemp -d --tmpdir=/tmp/ PART1.XXX)
+    sudo mount -o umask=000 "${UNIDAD}"1 ${DIRECTORIO}
+    echo "Permitiendo acceso por SSH"
+    touch ${DIRECTORIO}/ssh
+    echo "Configurando acceso a red WiFi ${1}"
+    echo -e "country=ES\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1" > ${DIRECTORIO}/wpa_supplicant.conf
+    wpa_passphrase ${1} ${2} >> ${DIRECTORIO}/wpa_supplicant.conf
+    sed -i '/#/d' ${DIRECTORIO}/wpa_supplicant.conf 2>/dev/null
+    sudo umount ${DIRECTORIO}
+    echo "Configurando IP estatica ${3} con puerta de enlace ${4}"
+    sudo mount "${UNIDAD}"2 ${DIRECTORIO}
+    echo -e "interface wlan0\nstatic ipaddress=${3}/24\nstatic routers=${4}\nstatic domain_name_servers=${4} 8.8.8.8" >> ${DIRECTORIO}/etc/dhcpcd.conf
+    sudo umount ${DIRECTORIO}
+    rmdir ${DIRECTORIO}
+    echo "Proceso finalizado correctamente."
+  ;;
+  *)
+    echo "NO ha contestado que si (S). No se continúa. Adios ..."
+  ;;
+esac
