@@ -102,7 +102,7 @@ case $RESPUESTA in
     sudo umount ${DIRECTORIO}
     echo "Configurando IP estatica ${3} con puerta de enlace ${4}"
     sudo mount "${UNIDAD}"2 ${DIRECTORIO}
-    echo -e "interface wlan0\nstatic ipaddress=${3}/24\nstatic routers=${4}\nstatic domain_name_servers=${4} 8.8.8.8" >> ${DIRECTORIO}/etc/dhcpcd.conf
+    echo -e "interface wlan0\nstatic ip_address=${3}/24\nstatic routers=${4}\nstatic domain_name_servers=${4} 8.8.8.8" >> ${DIRECTORIO}/etc/dhcpcd.conf
     sudo umount ${DIRECTORIO}
     rmdir ${DIRECTORIO}
     echo "Proceso finalizado correctamente."
